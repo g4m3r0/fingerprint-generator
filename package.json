@@ -10,6 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.21.2",
-    "fingerprint-generator": "^2.1.69"
+    "fingerprint-generator": "^2.1.70"
   }
 }
