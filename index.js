@@ -74,6 +74,14 @@ app.post('/generate-fingerprint', (req, res) => {
     }
 });
 
+/**
+ * @route GET /health
+ * @description Returns "Healthy" if the API is reachable
+ */
+app.get('/health', (req, res) => {
+    res.type('text/plain').send('Healthy');
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
