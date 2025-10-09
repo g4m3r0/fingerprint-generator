@@ -9,13 +9,15 @@ app.use(express.json());
 
 /**
  * @route GET /fingerprint
- * @description Generates a fingerprint with default settings
+ * @query {boolean} [disableMobile=false] - Set to true to disable mobile device fingerprints.
+ * @description Generates a fingerprint with realistic distribution (mobile & desktop by default)
  */
 app.get('/fingerprint', (req, res) => {
+    const disableMobile = ['true', '1'].includes((req.query.disableMobile || '').toString().toLowerCase());
+    const devices = disableMobile ? ['desktop'] : ['desktop', 'mobile'];
+
     const { fingerprint } = fingerprintGenerator.getFingerprint({
-        locales: ['en', 'en-US'],
-        browsers: ['chrome'],
-        devices: ['desktop'],
+        devices,
     });
 
     res.json(fingerprint);
