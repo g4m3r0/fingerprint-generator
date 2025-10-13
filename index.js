@@ -1,11 +1,53 @@
 const express = require('express');
 const { FingerprintGenerator } = require('fingerprint-generator');
 
+const SUPPORTED_BROWSERS = [
+    'chrome',
+    'firefox',
+    'safari',
+    'edge',
+];
+
+const SUPPORTED_OPERATING_SYSTEMS = [
+    'windows',
+    'macos',
+    'linux',
+    'android',
+    'ios',
+];
+
+const SUPPORTED_DEVICES = ['desktop', 'mobile'];
+
 const app = express();
 const fingerprintGenerator = new FingerprintGenerator();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+const parseQueryList = (value, supportedValues) => {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    const items = value
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean);
+
+    if (items.length === 0) {
+        return undefined;
+    }
+
+    const invalidItems = items.filter((item) => !supportedValues.includes(item));
+
+    if (invalidItems.length > 0) {
+        const error = new Error(`Invalid value(s): ${invalidItems.join(', ')}`);
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return [...new Set(items)];
+};
 
 /**
  * @route GET /fingerprint
@@ -21,6 +63,49 @@ app.get('/fingerprint', (req, res) => {
     });
 
     res.json(fingerprint);
+});
+
+/**
+ * @route GET /fingerprint/by-options
+ * @query {string} [browsers] - Comma-separated list of browsers. Supported values: chrome, firefox, safari, edge.
+ * @query {string} [operatingSystems] - Comma-separated list of operating systems. Supported values: windows, macos, linux, android, ios.
+ * @query {string} [devices] - Comma-separated list of devices. Supported values: desktop, mobile.
+ * @description Generates a fingerprint using the supplied filters.
+ */
+app.get('/fingerprint/by-options', (req, res) => {
+    try {
+        const browsers = parseQueryList(req.query.browsers, SUPPORTED_BROWSERS);
+        const operatingSystems = parseQueryList(req.query.operatingSystems, SUPPORTED_OPERATING_SYSTEMS);
+        const devices = parseQueryList(req.query.devices, SUPPORTED_DEVICES);
+
+        const options = {};
+
+        if (browsers) {
+            options.browsers = browsers;
+        }
+
+        if (operatingSystems) {
+            options.operatingSystems = operatingSystems;
+        }
+
+        if (devices) {
+            options.devices = devices;
+        }
+
+        if (!options.devices) {
+            options.devices = ['desktop'];
+        }
+
+        const { fingerprint } = fingerprintGenerator.getFingerprint(options);
+
+        res.json(fingerprint);
+    } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
+
+        res.status(500).json({ error: 'Failed to generate fingerprint.', details: error.message });
+    }
 });
 
 /**
@@ -87,3 +172,9 @@ app.get('/health', (req, res) => {
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+module.exports = {
+    SUPPORTED_BROWSERS,
+    SUPPORTED_OPERATING_SYSTEMS,
+    SUPPORTED_DEVICES,
+};
