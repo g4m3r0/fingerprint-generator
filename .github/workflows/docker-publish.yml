@@ -1,0 +1,92 @@
+name: "Docker Publish"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.gsoftwarelab.com
+  IMAGE_NAME: fingerprint-generator
+
+jobs:
+  publish:
+    name: "Build and Push Docker Image"
+    runs-on: ubuntu-latest
+    environment: Production
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          clean: true
+
+      - name: "Ensure workflow is executed from main"
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_name }}" -ne "main") {
+            Write-Error "This workflow only publishes images from the main branch. Current ref: ${{ github.ref_name }}"
+            exit 1
+          }
+
+      - name: "Extract version from package.json"
+        id: version
+        shell: pwsh
+        run: |
+          $packageJson = Get-Content "package.json" | ConvertFrom-Json
+          $version = $packageJson.version
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Error "Version is missing in package.json"
+            exit 1
+          }
+
+          $version = $version.Trim()
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Detected version: $version"
+
+      - name: "Check if version tag already exists"
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $tagExists = git ls-remote --tags origin "refs/tags/$version"
+          if ($null -ne $tagExists -and $tagExists -ne "") {
+            Write-Error "Version $version already exists as a tag. You must bump the version in package.json before pushing to main."
+            exit 1
+          }
+          Write-Host "Version $version is new. Proceeding..."
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Login to registry"
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: "Build and push linux/amd64 image"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: "Create GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
