@@ -67,6 +67,13 @@ Detailed filtering via JSON body.
    ```
    The API will be available at `http://localhost:3000`.
 
+### Testing
+Run the automated test suite (Node.js built-in test runner + Supertest):
+```bash
+npm test
+```
+Use `npm run test:watch` to re-run tests on file changes.
+
 ## Docker
 
 ### Build and Run Locally

@@ -170,10 +170,13 @@ app.get('/health', (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
 
 module.exports = {
+    app,
     SUPPORTED_BROWSERS,
     SUPPORTED_OPERATING_SYSTEMS,
     SUPPORTED_DEVICES,
