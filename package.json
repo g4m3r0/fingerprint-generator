@@ -1,15 +1,23 @@
 {
   "name": "fingerprint-generator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Simple API to generate browser fingerprints using Express and Fingerprint Generator library.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1",
-    "fingerprint-generator": "^2.1.82"
+    "express": "^5.3.0",
+    "fingerprint-generator": "^2.1.89"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1"
   }
 }
